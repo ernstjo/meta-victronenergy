@@ -1,0 +1,42 @@
+From 520d755d324a32c97cb9e25b617e99d0ab93d666 Mon Sep 17 00:00:00 2001
+From: Laszlo Agocs <laszlo.agocs@qt.io>
+Date: Wed, 03 Jan 2024 11:46:06 +0100
+Subject: [PATCH] rhi: gl: Pretend 4x MSAA is always supported when cannot query
+
+With ES 3.0 and up the GL_MAX_SAMPLES query is available and is
+guaranteed to be at least 4.
+
+With ES 2.0 there is no such query.
+
+While what we report from supportedSampleCounts() has little
+significance with OpenGL (for the window's color buffer it is
+anyway the QSurfaceFormat that decides, not QRhi), QRhi users
+such as Qt Quick may rely on supportedSampleCounts() returning
+real values and may, for example, warn if the value attempted
+to use is not in the supported list. (even if MSAA is fully
+functional)
+
+Avoid getting such warnings on a pure ES 2.0 implementation
+with 4x at least.
+
+Pick-to: 6.7 6.6 6.5
+Fixes: QTBUG-120474
+Change-Id: I8a34a8bc9ce37ce951fdf7794247e8db44435d41
+Reviewed-by: Andy Nichols <andy.nichols@qt.io>
+---
+
+diff --git a/src/gui/rhi/qrhigles2.cpp b/src/gui/rhi/qrhigles2.cpp
+index ec1a174..e41ac6d 100644
+--- a/src/gui/rhi/qrhigles2.cpp
++++ b/src/gui/rhi/qrhigles2.cpp
+@@ -846,8 +846,8 @@
+         caps.maxDrawBuffers = 1;
+         caps.hasDrawBuffersFunc = false;
+         // This does not mean MSAA is not supported, just that we cannot query
+-        // the supported sample counts.
+-        caps.maxSamples = 1;
++        // the supported sample counts. Assume that 4x is always supported.
++        caps.maxSamples = 4;
+     }
+ 
+     caps.msaaRenderBuffer = f->hasOpenGLExtension(QOpenGLExtensions::FramebufferMultisample)
